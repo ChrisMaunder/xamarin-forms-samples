@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Xamarin.Forms;
 using Robotics.Mobile.Core.Bluetooth.LE;
 using System.Collections.ObjectModel;
@@ -9,69 +8,84 @@ namespace HeartRateMonitor
 {	
 	public partial class CharacteristicList : ContentPage
 	{	
-		IAdapter adapter;
-		IDevice device;
-		IService service; 
+		IAdapter _adapter;
+		IDevice  _device;
+		IService _service; 
 
-		ObservableCollection<ICharacteristic> characteristics;
+		ObservableCollection<ICharacteristic> _characteristics;
 
-		public CharacteristicList (IAdapter adapter, IDevice device, IService service)
-		{
-			InitializeComponent ();
-			this.adapter = adapter;
-			this.device = device;
-			this.service = service;
-			this.characteristics = new ObservableCollection<ICharacteristic> ();
+        public CharacteristicList(IAdapter adapter, IDevice device, IService service)
+        {
+            InitializeComponent();
+            
+            _adapter = adapter;
+            _device  = device;
+            _service = service;
 
-			listView.ItemsSource = characteristics;
+            _characteristics = new ObservableCollection<ICharacteristic>();
 
-			// when characteristics are discovered
-			service.CharacteristicsDiscovered += (object sender, EventArgs e) => {
-				Debug.WriteLine("service.CharacteristicsDiscovered");
-				if (characteristics.Count == 0)
-					Device.BeginInvokeOnMainThread(() => {
-						foreach (var characteristic in service.Characteristics) {
-							characteristics.Add(characteristic);
-						}
-					});
-			};
-			
-			// start looking for characteristics
-			service.DiscoverCharacteristics ();
-		}
+            listView.ItemsSource = _characteristics;
 
+            // when characteristics are discovered
+            service.CharacteristicsDiscovered += (object sender, EventArgs e) =>
+            {
+                Debug.WriteLine("service.CharacteristicsDiscovered");
+                if (_characteristics.Count == 0)
+                {
+                    Device.BeginInvokeOnMainThread(() =>
+                    {
+                        foreach (var characteristic in service.Characteristics)
+                        {
+                            _characteristics.Add(characteristic);
+                        }
+                    });
+                }
+            };
+
+            // start looking for characteristics
+            service.DiscoverCharacteristics();
+        }
 
 		protected override void OnAppearing ()
 		{
 			base.OnAppearing ();
-			if (characteristics.Count == 0) {
+			
+            if (_characteristics.Count == 0) 
+            {
 				Debug.WriteLine ("No characteristics, attempting to find some");
 				// start looking for the device
-				adapter.ConnectToDevice (device); 
+				_adapter.ConnectToDevice (_device); 
 			}
 		}
-		/// <summary>
-		/// Display a Characteristics Page
-		/// </summary>
-		public void OnItemSelected (object sender, SelectedItemChangedEventArgs e) {
-			if (((ListView)sender).SelectedItem == null) {
-				return;
-			}
 
-			var characteristic = e.SelectedItem as ICharacteristic;
-			ContentPage characteristicsPage = null;
+        /// <summary>
+        /// Display a Characteristics Page
+        /// </summary>
+        public void OnItemSelected(object sender, SelectedItemChangedEventArgs e)
+        {
+            ListView listView = sender as ListView;
+            if (listView?.SelectedItem == null)
+                return;
 
+            var characteristic = e.SelectedItem as ICharacteristic;
+            ContentPage characteristicsPage = null;
 
-			if (characteristic.ID == 0x2A37.UuidFromPartial () ||  characteristic.ID == 0x2A38.UuidFromPartial ()) { 
-				characteristicsPage = new CharacteristicDetail_Hrm (adapter, device, service, characteristic);
-			} else {
-				characteristicsPage = new CharacteristicDetail (adapter, device, service, characteristic);
-			}
+            if (characteristic.ID == 0x2A37.UuidFromPartial() || 
+                characteristic.ID == 0x2A38.UuidFromPartial())
+            {
+                characteristicsPage = new CharacteristicDetail_Hrm(_adapter, _device, _service, 
+                                                                   characteristic);
+            }
+            else
+            {
+                characteristicsPage = new CharacteristicDetail(_adapter, _device, _service, 
+                                                               characteristic);
+            }
 
-			Navigation.PushAsync(characteristicsPage);
+            Navigation.PushAsync(characteristicsPage);
 
-			((ListView)sender).SelectedItem = null; // clear selection
-		}
+            listView.SelectedItem = null; // clear selection
+        }
 	}
 }
 

@@ -13,7 +13,7 @@ namespace HeartRateMonitor
 			CultureInfo culture)
 		{
 			String str = (String)value;
-			return String.IsNullOrWhiteSpace (str) ? "<un-named device>" : str;
+			return String.IsNullOrWhiteSpace (str) ? "<unnamed device>" : str;
 		}
 
 		public object ConvertBack (

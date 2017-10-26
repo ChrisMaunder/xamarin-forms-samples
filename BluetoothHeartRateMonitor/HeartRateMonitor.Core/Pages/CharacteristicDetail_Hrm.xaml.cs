@@ -9,45 +9,51 @@ namespace HeartRateMonitor
 {	
 	public partial class CharacteristicDetail_Hrm : ContentPage
 	{	
-		ICharacteristic characteristic;
+		ICharacteristic _characteristic;
 
-		//EventHandler<CharacteristicReadEventArgs> valueUpdatedHandler;
+        //EventHandler<CharacteristicReadEventArgs> valueUpdatedHandler;
 
-		public CharacteristicDetail_Hrm (IAdapter adapter, IDevice device, IService service, ICharacteristic characteristic)
-		{
-			InitializeComponent ();
-			this.characteristic = characteristic;
+        public CharacteristicDetail_Hrm(IAdapter adapter, IDevice device, IService service,
+                                         ICharacteristic characteristic)
+        {
+            InitializeComponent();
+            _characteristic = characteristic;
 
-			Title = characteristic.Name;
+            Title = characteristic.Name;
 
-			if (characteristic.CanUpdate) {
-				characteristic.ValueUpdated += (s, e) => {
-					Debug.WriteLine("characteristic.ValueUpdated");
-					Device.BeginInvokeOnMainThread( () => {
-						UpdateDisplay(characteristic);
-					});
-					IsBusy = false; // only spin until the first result is received
-				};
-				IsBusy = true;
-				characteristic.StartUpdates();
-			}
-		}
+            if (characteristic.CanUpdate)
+            {
+                characteristic.ValueUpdated += (s, e) =>
+                {
+                    Debug.WriteLine("characteristic.ValueUpdated");
+                    Device.BeginInvokeOnMainThread(() =>
+                    {
+                        UpdateDisplay(characteristic);
+                    });
+                    IsBusy = false; // only spin until the first result is received
+                };
+
+                IsBusy = true;
+                characteristic.StartUpdates();
+            }
+        }
 
 		protected override async void OnAppearing ()
 		{
 			InitializeComponent ();
-			this.characteristic = characteristic;
+			// _characteristic = _characteristic;
 
-			if (characteristic.CanRead) {
-				var c = await characteristic.ReadAsync();
+			if (_characteristic.CanRead) {
+				var c = await _characteristic.ReadAsync();
 				UpdateDisplay(c);
 			}
 		}
 		protected override void OnDisappearing() 
 		{
 			base.OnDisappearing();
-			if (characteristic.CanUpdate) {
-				characteristic.StopUpdates();
+
+			if (_characteristic.CanUpdate) {
+				_characteristic.StopUpdates();
 				//characteristic.ValueUpdated -= valueUpdatedHandler;
 			}
 		}
@@ -74,10 +80,7 @@ namespace HeartRateMonitor
 				StringValue.Text = c.StringValue;
 				StringValue.TextColor = Color.Default;
 			}
-
-
 		}
-
 
 		string DecodeHeartRateCharacteristicValue(byte[] data) {
 			ushort bpm = 0;
@@ -90,11 +93,12 @@ namespace HeartRateMonitor
 			return bpm.ToString () + " bpm";
 		}
 
-
 		string DecodeHeartMonitorPosition (byte[] data) {
 			var position = data[0];
 			var locationString = "-";
+
 			Debug.WriteLine("----------------------position:" + position);
+
 			// https://developer.apple.com/library/mac/samplecode/HeartRateMonitor/Listings/HeartRateMonitor_HeartRateMonitorAppDelegate_m.html
 			switch (position) {
 			case 0:

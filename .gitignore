@@ -182,3 +182,8 @@ FakesAssemblies/
 *.userprefs
 
 .DS_Store
+/.vs/VSWorkspaceState.json
+/.vs/slnx.sqlite
+/BluetoothHeartRateMonitor/.vs/HeartRateMonitorXF/v15
+/BluetoothHeartRateMonitor/Monkey Robotics/.vs/Robotics/v15/Server/sqlite3
+/BluetoothHeartRateMonitor/.vs/config

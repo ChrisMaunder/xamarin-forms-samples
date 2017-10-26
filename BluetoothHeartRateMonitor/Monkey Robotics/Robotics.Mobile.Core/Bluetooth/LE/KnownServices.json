@@ -1,0 +1,83 @@
+﻿{
+  "00001811-0000-1000-8000-00805f9b34fb": "Alert Notification Service",
+  "0000180f-0000-1000-8000-00805f9b34fb": "Battery Service",
+  "00001810-0000-1000-8000-00805f9b34fb": "Blood Pressure",
+  "00001805-0000-1000-8000-00805f9b34fb": "Current Time Service",
+  "00001818-0000-1000-8000-00805f9b34fb": "Cycling Power",
+  "00001816-0000-1000-8000-00805f9b34fb": "Cycling Speed and Cadence",
+  "0000180a-0000-1000-8000-00805f9b34fb": "Device Information",
+  "00001800-0000-1000-8000-00805f9b34fb": "Generic Access",
+  "00001801-0000-1000-8000-00805f9b34fb": "Generic Attribute",
+  "00001808-0000-1000-8000-00805f9b34fb": "Glucose",
+  "00001809-0000-1000-8000-00805f9b34fb": "Health Thermometer",
+  "0000180d-0000-1000-8000-00805f9b34fb": "Heart Rate",
+  "00001812-0000-1000-8000-00805f9b34fb": "Human Interface Device",
+  "00001802-0000-1000-8000-00805f9b34fb": "Immediate Alert",
+  "00001803-0000-1000-8000-00805f9b34fb": "Link Loss",
+  "00001819-0000-1000-8000-00805f9b34fb": "Location and Navigation",
+  "00001807-0000-1000-8000-00805f9b34fb": "Next DST Change Service",
+  "0000180e-0000-1000-8000-00805f9b34fb": "Phone Alert Status Service",
+  "00001806-0000-1000-8000-00805f9b34fb": "Reference Time Update Service",
+  "00001814-0000-1000-8000-00805f9b34fb": "Running Speed and Cadence",
+  "00001813-0000-1000-8000-00805f9b34fb": "Scan Parameters",
+  "00001804-0000-1000-8000-00805f9b34fb": "TX Power",
+
+
+  "0000ffe0-0000-1000-8000-00805f9b34fb": "TI SensorTag Smart Keys",
+  "f000aa00-0451-4000-b000-000000000000": "TI SensorTag Infrared Thermometer",
+  "f000aa10-0451-4000-b000-000000000000": "TI SensorTag Accelerometer",
+  "f000aa20-0451-4000-b000-000000000000": "TI SensorTag Humidity",
+  "f000aa30-0451-4000-b000-000000000000": "TI SensorTag Magnometer",
+  "f000aa40-0451-4000-b000-000000000000": "TI SensorTag Barometer",
+  "f000aa50-0451-4000-b000-000000000000": "TI SensorTag Gyroscope",
+  "f000aa60-0451-4000-b000-000000000000": "TI SensorTag Test",
+  "f000ccc0-0451-4000-b000-000000000000": "TI SensorTag Connection Control",
+  "f000ffc0-0451-4000-b000-000000000000": "TI SensorTag OvertheAir Download",
+
+
+  "713d0000-503e-4c75-ba94-3148f18d941e": "TXRX_SERV_UUID RedBearLabs Biscuit Service"
+}
+
+/*
+  https://www.bluetooth.com/specifications/gatt/services
+
+Generic Access	org.bluetooth.service.generic_access	0x1800	GCD
+Alert Notification Service	org.bluetooth.service.alert_notification	0x1811	GCD
+Automation IO	org.bluetooth.service.automation_io	0x1815	GCD
+Battery Service	org.bluetooth.service.battery_service	0x180F	GCD
+Blood Pressure	org.bluetooth.service.blood_pressure	0x1810	GCD
+Body Composition	org.bluetooth.service.body_composition	0x181B	GCD
+Bond Management Service	org.bluetooth.service.bond_management	0x181E	GCD
+Continuous Glucose Monitoring	org.bluetooth.service.continuous_glucose_monitoring	0x181F	GCD
+Current Time Service	org.bluetooth.service.current_time	0x1805	GCD
+Cycling Power	org.bluetooth.service.cycling_power	0x1818	GCD
+Cycling Speed and Cadence	org.bluetooth.service.cycling_speed_and_cadence	0x1816	GCD
+Device Information	org.bluetooth.service.device_information	0x180A	GCD
+Environmental Sensing	org.bluetooth.service.environmental_sensing	0x181A	GCD
+Fitness Machine	org.bluetooth.service.fitness_machine	0x1826	GCD
+Generic Attribute	org.bluetooth.service.generic_attribute	0x1801	GCD
+Glucose	org.bluetooth.service.glucose	0x1808	GCD
+Health Thermometer	org.bluetooth.service.health_thermometer	0x1809	GCD
+Heart Rate	org.bluetooth.service.heart_rate	0x180D	GCD
+HTTP Proxy	org.bluetooth.service.http_proxy	0x1823	GCD
+Human Interface Device	org.bluetooth.service.human_interface_device	0x1812	GCD
+Immediate Alert	org.bluetooth.service.immediate_alert	0x1802	GCD
+Indoor Positioning	org.bluetooth.service.indoor_positioning	0x1821	GCD
+Internet Protocol Support Service	org.bluetooth.service.internet_protocol_support	0x1820	GCD
+Link Loss	org.bluetooth.service.link_loss	0x1803	GCD
+Location and Navigation	org.bluetooth.service.location_and_navigation	0x1819	GCD
+Mesh Provisioning Service	org.bluetooth.service.mesh_provisioning	0x1827	GCD
+Mesh Proxy Service	org.bluetooth.service.mesh_proxy	0x1828	GCD
+Next DST Change Service	org.bluetooth.service.next_dst_change	0x1807	GCD
+Object Transfer Service	org.bluetooth.service.object_transfer	0x1825	GCD
+Phone Alert Status Service	org.bluetooth.service.phone_alert_status	0x180E	GCD
+Pulse Oximeter Service	org.bluetooth.service.pulse_oximeter	0x1822	GCD
+Reference Time Update Service	org.bluetooth.service.reference_time_update	0x1806	GCD
+Running Speed and Cadence	org.bluetooth.service.running_speed_and_cadence	0x1814	GCD
+Scan Parameters	org.bluetooth.service.scan_parameters	0x1813	GCD
+Transport Discovery	org.bluetooth.service.transport_discovery	0x1824	GCD
+Tx Power	org.bluetooth.service.tx_power	0x1804	GCD
+User Data	org.bluetooth.service.user_data	0x181C	GCD
+Weight Scale	org.bluetooth.service.weight_scale	0x181D
+
+*/
