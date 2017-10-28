@@ -42,8 +42,9 @@ namespace HeartRateMonitor
             ScanHrmButton.Clicked += (sender, e) =>
             {
                 InfoFrame.IsVisible = false;
+
                 // this is the UUID for Heart Rate Monitors
-                StartScanning(0x180D.UuidFromPartial());
+                StartScanning(0x180D.GuidFromAssignedNumber());
             };
         }
 
@@ -59,6 +60,7 @@ namespace HeartRateMonitor
 
             var device      = e.SelectedItem as IDevice;
             var servicePage = new ServiceList(_adapter, device);
+
             // load services on the next page
             Navigation.PushAsync(servicePage);
 
@@ -83,8 +85,10 @@ namespace HeartRateMonitor
             {
                 _devices.Clear();
                 IsBusy = true;
+
                 // _adapter.StartScanningForDevices(forService);
                 _adapter.StartScanningForDevices();
+
                 Debug.WriteLine("adapter.StartScanningForDevices(" + forService + ")");
             }
         }

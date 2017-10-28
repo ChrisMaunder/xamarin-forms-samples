@@ -3,19 +3,14 @@ using System.Collections.Generic;
 
 namespace Android.Robotics.Messaging
 {
-	public class MessageBase
-	{
-		// byte[] _rawData;
+    public class MessageBase
+    {
+        public MessageBase()
+        {
+            Data = new Dictionary<string, object>();
+        }
 
-		public MessageBase ()
-		{
-			this.Data = new Dictionary<string, object> ();
-		}
-
-		public Dictionary<string, object> Data {
-			get;
-			set;
-		}
-	}
+        public Dictionary<string, object> Data { get; set; }
+    }
 }
 

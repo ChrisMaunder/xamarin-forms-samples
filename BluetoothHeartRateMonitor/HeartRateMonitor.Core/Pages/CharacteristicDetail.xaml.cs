@@ -57,12 +57,12 @@ namespace HeartRateMonitor
             Name.Text = c.Name;
 
             //ID.Text = c.ID.ToString();
-            ID.Text = c.ID.PartialFromUuid();
+            ID.Text = c.ID.AssignedNumberFromGuid();
 
             var s = (from i in c.Value select i.ToString("X").PadRight(2, '0')).ToArray();
             RawValue.Text = string.Join(":", s);
 
-            if (c.ID == 0x2A37.UuidFromPartial())
+            if (c.ID == 0x2A37.GuidFromAssignedNumber())
             {
                 // heart rate
                 StringValue.Text      = DecodeHeartRateCharacteristicValue(c.Value);

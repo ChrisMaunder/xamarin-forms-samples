@@ -1,194 +1,218 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-#if __UNIFIED__
 using CoreBluetooth;
 using Foundation;
-#else
-using MonoTouch.CoreBluetooth;
-using MonoTouch.Foundation;
-#endif
-
 
 namespace Robotics.Mobile.Core.Bluetooth.LE
 {
-	public class Characteristic : ICharacteristic
-	{
-		public event EventHandler<CharacteristicReadEventArgs> ValueUpdated = delegate {};
+    public class Characteristic : ICharacteristic
+    {
+        public event EventHandler<CharacteristicReadEventArgs> ValueUpdated = delegate { };
 
-		protected CBCharacteristic _nativeCharacteristic;
-		CBPeripheral _parentDevice;
+        protected CBCharacteristic _nativeCharacteristic;
+        protected IList<IDescriptor> _descriptors;
 
-		public Characteristic (CBCharacteristic nativeCharacteristic, CBPeripheral parentDevice)
-		{
-			this._nativeCharacteristic = nativeCharacteristic;
-			this._parentDevice = parentDevice;
-		}
-		public string Uuid {
-			get { return this._nativeCharacteristic.UUID.ToString (); }
-		}
+        private CBPeripheral _parentDevice;
 
-		public Guid ID {
-			get { return CharacteristicUuidToGuid (this._nativeCharacteristic.UUID); }
-		}
+        public Characteristic(CBCharacteristic nativeCharacteristic, CBPeripheral parentDevice)
+        {
+            _nativeCharacteristic = nativeCharacteristic;
+            _parentDevice = parentDevice;
+        }
 
-		public byte[] Value {
-			get { 
-				if (_nativeCharacteristic.Value == null)
-					return null;
-				return this._nativeCharacteristic.Value.ToArray(); 
-			}
-		}
+        /// <summary>
+        /// The assigned number of this characteristic.
+        /// </summary>
+        public string Uuid
+        {
+            get { return _nativeCharacteristic.UUID.ToString(); }
+        }
 
-		public string StringValue {
-			get {
-				if (this.Value == null)
-					return String.Empty;
-				else {
-					var stringByes = this.Value;
-					var s1 = System.Text.Encoding.UTF8.GetString (stringByes);
-					//var s2 = System.Text.Encoding.ASCII.GetString (stringByes);
-					return s1;
-				}
-			}
-		}
+        /// <summary>
+        /// The full GUID based on the assigned number of this characteristic.
+        /// </summary>
+        public Guid ID
+        {
+            get { return _nativeCharacteristic.UUID.ToString().GuidFromAssignedNumber(); }
+        }
 
-		public string Name {
-			get { return KnownCharacteristics.Lookup (this.ID).Name; }
-		}
+        public byte[] Value
+        {
+            get
+            {
+                if (_nativeCharacteristic.Value == null)
+                    return null;
 
-		public CharacteristicPropertyType Properties {
-			get {
-				return (CharacteristicPropertyType)(int)this._nativeCharacteristic.Properties;
-			}
-		}
+                return _nativeCharacteristic.Value.ToArray();
+            }
+        }
 
-		public IList<IDescriptor> Descriptors {
-			get {
-				// if we haven't converted them to our xplat objects
-				if (this._descriptors != null) {
-					this._descriptors = new List<IDescriptor> ();
-					// convert the internal list of them to the xplat ones
-					foreach (var item in this._nativeCharacteristic.Descriptors) {
-						this._descriptors.Add (new Descriptor (item));
-					}
-				}
-				return this._descriptors;
-			}
-		} protected IList<IDescriptor> _descriptors;
+        public string StringValue
+        {
+            get
+            {
+                if (Value == null)
+                    return string.Empty;
 
-		public object NativeCharacteristic {
-			get {
-				return this._nativeCharacteristic;
-			}
-		}
+                byte[] stringBytes = Value;
 
-		public bool CanRead {get{return (this.Properties & CharacteristicPropertyType.Read) != 0; }}
-		public bool CanUpdate {get{return (this.Properties & CharacteristicPropertyType.Notify) != 0; }}
-		public bool CanWrite {get{return (this.Properties & (CharacteristicPropertyType.WriteWithoutResponse | CharacteristicPropertyType.AppleWriteWithoutResponse)) != 0; }}
+                var utf8 = System.Text.Encoding.UTF8.GetString(stringBytes);
+                //var ascii = System.Text.Encoding.ASCII.GetString (stringByes);
 
-		public Task<ICharacteristic> ReadAsync() 
-		{
-			var tcs = new TaskCompletionSource<ICharacteristic>();
+                return utf8;
+            }
+        }
 
-			if (!CanRead) {
-				throw new InvalidOperationException ("Characteristic does not support READ");
-			}
-			EventHandler<CBCharacteristicEventArgs> updated = null;
-			updated = (object sender, CBCharacteristicEventArgs e) => {
-				Console.WriteLine(".....UpdatedCharacterteristicValue");
-				var c = new Characteristic(e.Characteristic, _parentDevice);
-				tcs.SetResult(c);
-				_parentDevice.UpdatedCharacterteristicValue -= updated;
-			};
+        public string Name
+        {
+            get { return KnownCharacteristics.Lookup(ID).Name; }
+        }
 
-			_parentDevice.UpdatedCharacterteristicValue += updated;
-			Console.WriteLine(".....ReadAsync");
-			_parentDevice.ReadValue (_nativeCharacteristic);
+        public CharacteristicPropertyType Properties
+        {
+            get { return (CharacteristicPropertyType)(int)_nativeCharacteristic.Properties; }
+        }
 
-			return tcs.Task;
-		}
+        public IList<IDescriptor> Descriptors
+        {
+            get
+            {
+                // if we haven't converted them to our xplat objects
+                if (_descriptors != null)
+                {
+                    _descriptors = new List<IDescriptor>();
 
-		public void Write (byte[] data) 
-		{
-			if (!CanWrite) {
-				throw new InvalidOperationException ("Characteristic does not support WRITE");
-			}
-			var nsdata = NSData.FromArray (data);
-			var descriptor = (CBCharacteristic)_nativeCharacteristic;
+                    // convert the internal list of them to the xplat ones
+                    foreach (var item in _nativeCharacteristic.Descriptors)
+                    {
+                        _descriptors.Add(new Descriptor(item));
+                    }
+                }
 
-			var t = (Properties & CharacteristicPropertyType.AppleWriteWithoutResponse) != 0 ?
-				CBCharacteristicWriteType.WithoutResponse :
-				CBCharacteristicWriteType.WithResponse;
+                return _descriptors;
+            }
+        }
 
-			_parentDevice.WriteValue (nsdata, descriptor, t);
+        public object NativeCharacteristic
+        {
+            get { return _nativeCharacteristic; }
+        }
 
-//			Console.WriteLine ("** Characteristic.Write, Type = " + t + ", Data = " + BitConverter.ToString (data));
+        public bool CanRead
+        {
+            get { return (Properties & CharacteristicPropertyType.Read) != 0; }
+        }
 
-			return;
-		}
+        public bool CanUpdate
+        {
+            get { return (Properties & CharacteristicPropertyType.Notify) != 0; }
+        }
 
-		public void StartUpdates ()
-		{
-			// TODO: should be bool RequestValue? compare iOS API for commonality
-			bool successful = false;
-			if(CanRead) {
-				Console.WriteLine ("** Characteristic.RequestValue, PropertyType = Read, requesting read");
-				_parentDevice.UpdatedCharacterteristicValue += UpdatedRead;
+        public bool CanWrite
+        {
+            get { return (Properties & (CharacteristicPropertyType.WriteWithoutResponse | 
+                                        CharacteristicPropertyType.AppleWriteWithoutResponse)) != 0; }
+        }
 
-				_parentDevice.ReadValue (_nativeCharacteristic);
+        public Task<ICharacteristic> ReadAsync()
+        {
+            var completionSource = new TaskCompletionSource<ICharacteristic>();
 
-				successful = true;
-			}
-			if (CanUpdate) {
-				Console.WriteLine ("** Characteristic.RequestValue, PropertyType = Notify, requesting updates");
-				_parentDevice.UpdatedCharacterteristicValue += UpdatedNotify;
+            if (!CanRead)
+                throw new InvalidOperationException("Characteristic does not support READ");
 
-				_parentDevice.SetNotifyValue (true, _nativeCharacteristic);
+            EventHandler<CBCharacteristicEventArgs> updated = null;
+            updated = (object sender, CBCharacteristicEventArgs e) =>
+            {
+                Console.WriteLine(".....UpdatedCharacterteristicValue");
 
-				successful = true;
-			}
+                var characteristic = new Characteristic(e.Characteristic, _parentDevice);
+                completionSource.SetResult(characteristic);
 
-			Console.WriteLine ("** RequestValue, Succesful: " + successful.ToString());
-		}
+                _parentDevice.UpdatedCharacterteristicValue -= updated;
+            };
 
-		public void StopUpdates () {
-			//bool successful = false;
-			if (CanUpdate) {
-				_parentDevice.SetNotifyValue (false, _nativeCharacteristic);
-				Console.WriteLine ("** Characteristic.RequestValue, PropertyType = Notify, STOP updates");
-			}
-		}
-		// removes listener after first response received
-		void UpdatedRead (object sender, CBCharacteristicEventArgs e) {
-			this.ValueUpdated (this, new CharacteristicReadEventArgs () {
-				Characteristic = new Characteristic(e.Characteristic, _parentDevice)
-			});
-			_parentDevice.UpdatedCharacterteristicValue -= UpdatedRead;
-		}
+            _parentDevice.UpdatedCharacterteristicValue += updated;
+            Console.WriteLine(".....ReadAsync");
+            _parentDevice.ReadValue(_nativeCharacteristic);
 
-		// continues to listen indefinitely
-		void UpdatedNotify(object sender, CBCharacteristicEventArgs e) {
-			this.ValueUpdated (this, new CharacteristicReadEventArgs () {
-				Characteristic = new Characteristic(e.Characteristic, _parentDevice)
-			});
-		}
+            return completionSource.Task;
+        }
 
-		//TODO: this is the exact same as ServiceUuid i think
-		public static Guid CharacteristicUuidToGuid ( CBUUID uuid)
-		{
-			//this sometimes returns only the significant bits, e.g.
-			//180d or whatever. so we need to add the full string
-			string id = uuid.ToString ();
-			if (id.Length == 4) {
-				id = "0000" + id + "-0000-1000-8000-00805f9b34fb";
-			}
-			return Guid.ParseExact (id, "d");
-		}
+        public void Write(byte[] data)
+        {
+            if (!CanWrite)
+                throw new InvalidOperationException("Characteristic does not support WRITE");
 
+            var nsdata = NSData.FromArray(data);
+            var descriptor = (CBCharacteristic)_nativeCharacteristic;
 
-	}
+            var writeType = (Properties & CharacteristicPropertyType.AppleWriteWithoutResponse) != 0 
+                          ? CBCharacteristicWriteType.WithoutResponse 
+                          : CBCharacteristicWriteType.WithResponse;
+
+            _parentDevice.WriteValue(nsdata, descriptor, writeType);
+
+            // Console.WriteLine ("** Characteristic.Write, Type = " + t + ", Data = " + BitConverter.ToString (data));
+        }
+
+        public void StartUpdates()
+        {
+            // TODO: should be bool RequestValue? compare iOS API for commonality
+            bool successful = false;
+            if (CanRead)
+            {
+                Console.WriteLine("** Characteristic.RequestValue, PropertyType = Read, requesting read");
+                _parentDevice.UpdatedCharacterteristicValue += UpdatedRead;
+
+                _parentDevice.ReadValue(_nativeCharacteristic);
+
+                successful = true;
+            }
+
+            if (CanUpdate)
+            {
+                Console.WriteLine("** Characteristic.RequestValue, PropertyType = Notify, requesting updates");
+                _parentDevice.UpdatedCharacterteristicValue += UpdatedNotify;
+
+                _parentDevice.SetNotifyValue(true, _nativeCharacteristic);
+
+                successful = true;
+            }
+
+            Console.WriteLine("** RequestValue, Succesful: " + successful.ToString());
+        }
+
+        public void StopUpdates()
+        {
+            if (CanUpdate)
+            {
+                _parentDevice.SetNotifyValue(false, _nativeCharacteristic);
+                Console.WriteLine("** Characteristic.RequestValue, PropertyType = Notify, STOP updates");
+            }
+        }
+
+        // removes listener after first response received
+        void UpdatedRead(object sender, CBCharacteristicEventArgs e)
+        {
+            ValueUpdated(this, new CharacteristicReadEventArgs()
+                               {
+                                   Characteristic = new Characteristic(e.Characteristic, _parentDevice)
+                               });
+
+            _parentDevice.UpdatedCharacterteristicValue -= UpdatedRead;
+        }
+
+        // continues to listen indefinitely
+        void UpdatedNotify(object sender, CBCharacteristicEventArgs e)
+        {
+            ValueUpdated(this, new CharacteristicReadEventArgs()
+                                {
+                                    Characteristic = new Characteristic(e.Characteristic, _parentDevice)
+                                });
+        }
+    }
 }
 

@@ -11,16 +11,28 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
 
         // properties
         Guid ID { get; }
+        
+        /// <summary>
+        /// The assigned number of this characteristic.
+        /// </summary>
         string Uuid { get; }
+
         byte[] Value { get; }
+
         string StringValue { get; }
+
         IList<IDescriptor> Descriptors { get; }
+
         object NativeCharacteristic { get; }
+
         string Name { get; }
+
         CharacteristicPropertyType Properties { get; }
 
         bool CanRead { get; }
+
         bool CanUpdate { get; }
+
         bool CanWrite { get; }
 
         // methods

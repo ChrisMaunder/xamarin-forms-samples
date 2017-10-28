@@ -19,11 +19,11 @@
 		     	<StackLayout Padding="5,0,0,0" VerticalOptions="StartAndExpand" Orientation="Vertical">
 		        	<Label Text="{Binding Name, Converter={StaticResource strConverter}}" 
 		        		YAlign="Center" 
-		        		Font="Medium" />
+		        		Font="Large" />
 		        	<Label Text="{Binding ID, Converter={StaticResource guidConverter}}" 
 		        		YAlign="Center" 
-		        		Font="Micro" 
-		        		TextColor="Gray" />
+		        		Font="Medium" 
+		        		TextColor="GhostWhite" />
 		        </StackLayout>
 	         </StackLayout>
 	      </ViewCell>

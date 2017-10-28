@@ -5,16 +5,16 @@ using System.Threading.Tasks;
 
 namespace Robotics.Mobile.Core.Bluetooth.LE
 {
-	/// <summary>
-	/// TODO: this really should be a singleton.
-	/// </summary>
-	public class Adapter : Java.Lang.Object, BluetoothAdapter.ILeScanCallback, IAdapter
-	{
-		// events
-		public event EventHandler<DeviceDiscoveredEventArgs> DeviceDiscovered   = delegate {};
-		public event EventHandler<DeviceConnectionEventArgs> DeviceConnected    = delegate {};
-		public event EventHandler<DeviceConnectionEventArgs> DeviceDisconnected = delegate {};
-		public event EventHandler ScanTimeoutElapsed = delegate {};
+    /// <summary>
+    /// TODO: this really should be a singleton.
+    /// </summary>
+    public class Adapter : Java.Lang.Object, BluetoothAdapter.ILeScanCallback, IAdapter
+    {
+        // events
+        public event EventHandler<DeviceDiscoveredEventArgs> DeviceDiscovered   = delegate { };
+        public event EventHandler<DeviceConnectionEventArgs> DeviceConnected    = delegate { };
+        public event EventHandler<DeviceConnectionEventArgs> DeviceDisconnected = delegate { };
+        public event EventHandler ScanTimeoutElapsed = delegate { };
 
         protected IList<IDevice> _connectedDevices = new List<IDevice>();
         protected bool _isScanning;
@@ -22,58 +22,54 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
 
         // class members
         protected BluetoothManager _manager;
-		protected BluetoothAdapter _adapter;
-		protected GattCallback     _gattCallback;
+        protected BluetoothAdapter _adapter;
+        protected GattCallback _gattCallback;
 
-		public bool IsScanning
+        public bool IsScanning
         {
             get { return _isScanning; }
-        } 
-
-		public IList<IDevice> DiscoveredDevices
-        {
-            get
-            {
-                return _discoveredDevices;
-            }
-        } 
-
-		public IList<IDevice> ConnectedDevices
-        {
-            get
-            {
-                return _connectedDevices;
-            }
         }
-        
-		public Adapter ()
-		{
-			var appContext = Android.App.Application.Context;
-			// get a reference to the bluetooth system service
-			_manager = (BluetoothManager) appContext.GetSystemService("bluetooth");
-			_adapter = _manager.Adapter;
 
-			_gattCallback = new GattCallback (this);
+        public IList<IDevice> DiscoveredDevices
+        {
+            get { return _discoveredDevices; }
+        }
 
-			_gattCallback.DeviceConnected += (object sender, DeviceConnectionEventArgs e) => {
-				_connectedDevices.Add ( e.Device);
-				DeviceConnected (this, e);
-			};
+        public IList<IDevice> ConnectedDevices
+        {
+            get { return _connectedDevices; }
+        }
 
-			_gattCallback.DeviceDisconnected += (object sender, DeviceConnectionEventArgs e) => {
-				// TODO: remove the disconnected device from the _connectedDevices list
-				// i don't think this will actually work, because i'm created a new underlying device here.
-				//if(_connectedDevices.Contains(
-				DeviceDisconnected (this, e);
-			};
-		}
+        public Adapter()
+        {
+            var appContext = Android.App.Application.Context;
 
-		//TODO: scan for specific service type eg. HeartRateMonitor
-		public async void StartScanningForDevices (Guid serviceUuid)
-		{
-			StartScanningForDevices();
-//			throw new NotImplementedException ("Not implemented on Android yet, look at _adapter.StartLeScan() overload");
-		}
+            // get a reference to the bluetooth system service
+            _manager = (BluetoothManager)appContext.GetSystemService("bluetooth");
+            _adapter = _manager.Adapter;
+
+            _gattCallback = new GattCallback(this);
+
+            _gattCallback.DeviceConnected += (object sender, DeviceConnectionEventArgs e) =>
+            {
+                _connectedDevices.Add(e.Device);
+                DeviceConnected(this, e);
+            };
+
+            _gattCallback.DeviceDisconnected += (object sender, DeviceConnectionEventArgs e) =>
+            {
+                // TODO: remove the disconnected device from the _connectedDevices list
+                // i don't think this will actually work, because i'm created a new underlying device here.
+                //if(_connectedDevices.Contains(
+                DeviceDisconnected(this, e);
+            };
+        }
+
+        //TODO: scan for specific service type eg. HeartRateMonitor
+        public async void StartScanningForDevices(Guid serviceUuid)
+        {
+            StartScanningForDevices();
+        }
 
         public async void StartScanningForDevices()
         {
@@ -84,6 +80,22 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
 
             // start scanning
             _isScanning = true;
+
+            /*
+            if (Build.VERSION.SdkInt >= BuildVersionCodes.Lollipop)
+            {
+                // The documentation both on the Xamarin and Android sides is non-existent.
+
+                ScanSettings.Builder builder = new ScanSettings.Builder();
+                builder.SetScanMode(Android.Bluetooth.LE.ScanMode.LowLatency);
+                ScanSettings settings = builder.Build();
+
+                var filters = new ArrayList<ScanFilter>();
+
+                _adapter.StartScan(filters, settings, OnLeScan);
+            }
+            else
+            */
             _adapter.StartLeScan(this);
 
             // in 10 seconds, stop the scan
@@ -98,12 +110,12 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
             }
         }
 
-		public void StopScanningForDevices ()
-		{
-			Console.WriteLine ("Adapter: Stopping the scan for devices.");
-			_isScanning = false;	
-			_adapter.StopLeScan (this);
-		}
+        public void StopScanningForDevices()
+        {
+            Console.WriteLine("Adapter: Stopping the scan for devices.");
+            _isScanning = false;
+            _adapter.StopLeScan(this);
+        }
 
         public void OnLeScan(BluetoothDevice bleDevice, int rssi, byte[] scanRecord)
         {
@@ -138,17 +150,17 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
             return false;
         }
 
-		public void ConnectToDevice (IDevice device)
-		{
-			// returns the BluetoothGatt, which is the API for BLE stuff
-			// TERRIBLE API design on the part of google here.
-			((BluetoothDevice)device.NativeDevice).ConnectGatt (Android.App.Application.Context, true, _gattCallback);
-		}
+        public void ConnectToDevice(IDevice device)
+        {
+            // returns the BluetoothGatt, which is the API for BLE stuff
+            // TERRIBLE API design on the part of google here.
+            ((BluetoothDevice)device.NativeDevice).ConnectGatt(Android.App.Application.Context, true, _gattCallback);
+        }
 
-		public void DisconnectDevice (IDevice device)
-		{
-			((Device) device).Disconnect();
-		}
-	}
+        public void DisconnectDevice(IDevice device)
+        {
+            ((Device)device).Disconnect();
+        }
+    }
 }
 

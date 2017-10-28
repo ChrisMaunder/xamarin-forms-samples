@@ -41,14 +41,17 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
             {
                 _gattCallback.ServicesDiscovered += (s, e) =>
                 {
-                    var services = _gatt.Services;
-                    _services = new List<IService>();
-                    foreach (var item in services)
+                    if (_gatt != null)
                     {
-                        _services.Add(new Service(item, _gatt, _gattCallback));
-                    }
+                        var services = _gatt.Services;
 
-                    ServicesDiscovered(this, e);
+                        // Make a copy of the services
+                        _services = new List<IService>();
+                        foreach (var item in services)
+                            _services.Add(new Service(item, _gatt, _gattCallback));
+
+                        ServicesDiscovered(this, e);
+                    }
                 };
             }
         }
@@ -104,13 +107,17 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
 
 		public override void DiscoverServices ()
 		{
-			_gatt.DiscoverServices ();
+            if (_gatt != null)
+                _gatt.DiscoverServices ();
 		}
 
 		public void Disconnect ()
 		{
-			_gatt.Disconnect ();
-			_gatt.Dispose ();
+            if (_gatt != null)
+            {
+                _gatt.Disconnect();
+                _gatt.Dispose();
+            }
 		}
 
 		#endregion

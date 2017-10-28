@@ -32,7 +32,7 @@
 			        		TextColor="Red" />
 			        	<Label Text="{Binding Path=ID, Converter={StaticResource guidConverter}}" 
 				        	YAlign="Center" 
-				        	Font="Small" 
+				        	Font="Medium" 
 				        	TextColor="Red"
 				        	Opacity="0.5" />
 			        </StackLayout>

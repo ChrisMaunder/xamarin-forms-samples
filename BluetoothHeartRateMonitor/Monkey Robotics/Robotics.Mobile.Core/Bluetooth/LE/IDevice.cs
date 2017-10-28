@@ -13,25 +13,29 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
         //TODO: should this be string or GUID? i think for our purposes, UUID on both plats
         // is fine as a GUID
         Guid ID { get; }
+
         string Name { get; }
+
         /// <summary>
         /// Gets the Received Signal Strenth Indicator (RSSI).
         /// </summary>
         /// <value>The RSSI in decibals.</value>
         int Rssi { get; }
+
         /// <summary>
-        /// Gets the native device object reference. Should be cast to the 
-        /// appropriate type on each platform.
+        /// Gets the native device object reference. Should be cast to the appropriate type on each 
+        /// platform.
         /// </summary>
-        /// <value>The native device.</value>
         object NativeDevice { get; }
+
         DeviceState State { get; }
 
-        // fuck. i hate c# sometimes. interfaces can't have constructors
-        // or static contracts
+        // fuck. i hate c# sometimes. interfaces can't have constructors or static contracts
+        // CM: Deal with it, bitch.
         //static IDevice FromNativeDevice (object nativeDevice);
 
         IList<IService> Services { get; }
+
         void DiscoverServices();
     }
 }

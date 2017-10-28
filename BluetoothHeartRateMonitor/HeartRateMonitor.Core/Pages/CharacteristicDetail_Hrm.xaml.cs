@@ -30,7 +30,8 @@ namespace HeartRateMonitor
                     {
                         UpdateDisplay(characteristic);
                     });
-                    IsBusy = false; // only spin until the first result is received
+                    
+                    // IsBusy = false; // [thread issue] only spin until the first result is received
                 };
 
                 IsBusy = true;
@@ -61,7 +62,7 @@ namespace HeartRateMonitor
 		void UpdateDisplay (ICharacteristic c) {
 			Debug.WriteLine ("UpdateDisplay");
 			Name.Text = c.Name;
-			ID.Text = c.ID.PartialFromUuid ();
+			ID.Text   = c.ID.AssignedNumberFromGuid();
 
 			var s = (from i in c.Value
 				select i.ToString ("X").PadRight(2, '0')).ToArray ();
@@ -69,11 +70,11 @@ namespace HeartRateMonitor
 			StringValue.Text = c.StringValue;
 
 
-			if (c.ID == 0x2A37.UuidFromPartial ()) {
+			if (c.ID == 0x2A37.GuidFromAssignedNumber()) {
 				// heart rate
 				StringValue.Text = DecodeHeartRateCharacteristicValue (c.Value);
 				StringValue.TextColor = Color.Red;
-			} else if (c.ID == 0x2A38.UuidFromPartial ()) { 
+			} else if (c.ID == 0x2A38.GuidFromAssignedNumber()) { 
 				StringValue.Text = DecodeHeartMonitorPosition (c.Value);
 				StringValue.TextColor = Color.Olive;
 			} else {

@@ -70,8 +70,8 @@ namespace HeartRateMonitor
             var characteristic = e.SelectedItem as ICharacteristic;
             ContentPage characteristicsPage = null;
 
-            if (characteristic.ID == 0x2A37.UuidFromPartial() || 
-                characteristic.ID == 0x2A38.UuidFromPartial())
+            if (characteristic.ID == 0x2A37.GuidFromAssignedNumber() || 
+                characteristic.ID == 0x2A38.GuidFromAssignedNumber())
             {
                 characteristicsPage = new CharacteristicDetail_Hrm(_adapter, _device, _service, 
                                                                    characteristic);

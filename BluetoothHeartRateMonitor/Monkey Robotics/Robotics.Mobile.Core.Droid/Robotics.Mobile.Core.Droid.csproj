@@ -58,10 +58,9 @@
     <AndroidResource Include="Resources\values\Strings.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Novell\Novell.MonoDroid.CSharp.targets" />
-  <ItemGroup />
   <ItemGroup>
     <ProjectReference Include="..\Robotics.Mobile.Core\Robotics.Mobile.Core.csproj">
-      <Project>{65733427-B647-4556-A87C-20937496780A}</Project>
+      <Project>{65733427-b647-4556-a87c-20937496780a}</Project>
       <Name>Robotics.Mobile.Core</Name>
     </ProjectReference>
   </ItemGroup>

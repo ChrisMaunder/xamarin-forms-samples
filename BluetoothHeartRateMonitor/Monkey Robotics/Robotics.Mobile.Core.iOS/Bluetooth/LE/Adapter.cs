@@ -4,205 +4,197 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Diagnostics;
 
-#if __UNIFIED__
 using CoreBluetooth;
 using CoreFoundation;
-#else
-using MonoTouch.CoreBluetooth;
-using MonoTouch.CoreFoundation;
-#endif
 
 namespace Robotics.Mobile.Core.Bluetooth.LE
 {
-	public class Adapter : IAdapter
-	{
-		// events
-		public event EventHandler<DeviceDiscoveredEventArgs> DeviceDiscovered = delegate {};
-		public event EventHandler<DeviceConnectionEventArgs> DeviceConnected = delegate {};
-		public event EventHandler<DeviceConnectionEventArgs> DeviceDisconnected = delegate {};
-		public event EventHandler<DeviceConnectionEventArgs> DeviceFailedToConnect = delegate {};
-		public event EventHandler ScanTimeoutElapsed = delegate {};
-		public event EventHandler ConnectTimeoutElapsed = delegate {};
+    public class Adapter : IAdapter
+    {
+        // events
+        public event EventHandler<DeviceDiscoveredEventArgs> DeviceDiscovered      = delegate { };
+        public event EventHandler<DeviceConnectionEventArgs> DeviceConnected       = delegate { };
+        public event EventHandler<DeviceConnectionEventArgs> DeviceDisconnected    = delegate { };
+        public event EventHandler<DeviceConnectionEventArgs> DeviceFailedToConnect = delegate { };
+        public event EventHandler                            ScanTimeoutElapsed    = delegate { };
+        public event EventHandler                            ConnectTimeoutElapsed = delegate { };
 
-		public CBCentralManager Central
-		{ get { return this._central; } }
-		protected CBCentralManager _central;
+        private CBCentralManager Central { get; set; }
 
-		public bool IsScanning {
-			get { return this._isScanning; }
-		} protected bool _isScanning;
+        public bool IsScanning { get; private set; }
 
-		public bool IsConnecting {
-			get { return this._isConnecting; }
-		} protected bool _isConnecting;
+        public bool IsConnecting { get; private set; }
 
-		public IList<IDevice> DiscoveredDevices {
-			get {
-				return this._discoveredDevices;
-			}
-		} protected IList<IDevice> _discoveredDevices = new List<IDevice> ();
+        public IList<IDevice> DiscoveredDevices { get; private set; } = new List<IDevice>();
 
-		public IList<IDevice> ConnectedDevices {
-			get {
-				return this._connectedDevices;
-			}
-		} protected IList<IDevice> _connectedDevices = new List<IDevice>();
+        public IList<IDevice> ConnectedDevices { get; private set; } = new List<IDevice>();
 
-		public static Adapter Current
-		{ get { return _current; } }
-		private static Adapter _current;
+        public static Adapter Current { get; private set; } = new Adapter();
 
-		static Adapter ()
-		{
-			_current = new Adapter ();
-		}
+        protected Adapter()
+        {
+            Central = new CBCentralManager(DispatchQueue.CurrentQueue);
 
-		protected Adapter ()
-		{
-			this._central = new CBCentralManager (DispatchQueue.CurrentQueue);
+            Central.DiscoveredPeripheral += (object sender, CBDiscoveredPeripheralEventArgs e) =>
+            {
+                Console.WriteLine("DiscoveredPeripheral: " + e.Peripheral.Name);
+                Device d = new Device(e.Peripheral);
+                if (!ContainsDevice(DiscoveredDevices, e.Peripheral))
+                {
+                    DiscoveredDevices.Add(d);
+                    this.DeviceDiscovered(this, new DeviceDiscoveredEventArgs() { Device = d });
+                }
+            };
 
-			_central.DiscoveredPeripheral += (object sender, CBDiscoveredPeripheralEventArgs e) => {
-				Console.WriteLine ("DiscoveredPeripheral: " + e.Peripheral.Name);
-				Device d = new Device(e.Peripheral);
-				if(!ContainsDevice(this._discoveredDevices, e.Peripheral ) ){
-					this._discoveredDevices.Add (d);
-					this.DeviceDiscovered(this, new DeviceDiscoveredEventArgs() { Device = d });
-				}
-			};
+            Central.UpdatedState += (object sender, EventArgs e) =>
+            {
+                Console.WriteLine("UpdatedState: " + Central.State);
+                stateChanged.Set();
+            };
 
-			_central.UpdatedState += (object sender, EventArgs e) => {
-				Console.WriteLine ("UpdatedState: " + _central.State);
-				stateChanged.Set ();
-			};
+            Central.ConnectedPeripheral += (object sender, CBPeripheralEventArgs e) =>
+            {
+                Console.WriteLine("ConnectedPeripheral: " + e.Peripheral.Name);
 
+                // When a peripheral gets connected, add that peripheral to our running list of 
+                // connected peripherals
+                if (!ContainsDevice(ConnectedDevices, e.Peripheral))
+                {
+                    Device d = new Device(e.Peripheral);
+                    ConnectedDevices.Add(new Device(e.Peripheral));
+                    // raise our connected event
+                    this.DeviceConnected(sender, new DeviceConnectionEventArgs() { Device = d });
+                }
+            };
 
-			_central.ConnectedPeripheral += (object sender, CBPeripheralEventArgs e) => {
-				Console.WriteLine ("ConnectedPeripheral: " + e.Peripheral.Name);
+            Central.DisconnectedPeripheral += (object sender, CBPeripheralErrorEventArgs e) =>
+            {
+                Console.WriteLine("DisconnectedPeripheral: " + e.Peripheral.Name);
 
-				// when a peripheral gets connected, add that peripheral to our running list of connected peripherals
-				if(!ContainsDevice(this._connectedDevices, e.Peripheral ) ){
-					Device d = new Device(e.Peripheral);
-					this._connectedDevices.Add (new Device(e.Peripheral));
-					// raise our connected event
-					this.DeviceConnected ( sender, new DeviceConnectionEventArgs () { Device = d } );
-				}			
-			};
+                // when a peripheral disconnects, remove it from our running list.
+                IDevice foundDevice = null;
+                foreach (var d in ConnectedDevices)
+                {
+                    if (d.ID == Guid.ParseExact(e.Peripheral.Identifier.AsString(), "d"))
+                        foundDevice = d;
+                }
 
-			_central.DisconnectedPeripheral += (object sender, CBPeripheralErrorEventArgs e) => {
-				Console.WriteLine ("DisconnectedPeripheral: " + e.Peripheral.Name);
+                if (foundDevice != null)
+                    ConnectedDevices.Remove(foundDevice);
 
-				// when a peripheral disconnects, remove it from our running list.
-				IDevice foundDevice = null;
-				foreach (var d in this._connectedDevices) {
-					if (d.ID == Guid.ParseExact(e.Peripheral.Identifier.AsString(), "d"))
-						foundDevice = d;
-				}
-				if (foundDevice != null)
-					this._connectedDevices.Remove(foundDevice);
+                // raise our disconnected event
+                DeviceDisconnected(sender, new DeviceConnectionEventArgs() 
+                                           { 
+                                               Device = new Device(e.Peripheral) 
+                                           });
+            };
 
-				// raise our disconnected event
-				this.DeviceDisconnected (sender, new DeviceConnectionEventArgs() { Device = new Device(e.Peripheral) });
-			};
+            Central.FailedToConnectPeripheral += (object sender, CBPeripheralErrorEventArgs e) =>
+            {
+                // raise the failed to connect event
+                DeviceFailedToConnect(this, new DeviceConnectionEventArgs()
+                {
+                    Device       = new Device(e.Peripheral),
+                    ErrorMessage = e.Error.Description
+                });
+            };
+        }
 
-			_central.FailedToConnectPeripheral += (object sender, CBPeripheralErrorEventArgs e) => {
-				// raise the failed to connect event
-				this.DeviceFailedToConnect(this, new DeviceConnectionEventArgs() { 
-					Device = new Device (e.Peripheral),
-					ErrorMessage = e.Error.Description
-				});
-			};
+        public void StartScanningForDevices()
+        {
+            StartScanningForDevices(serviceUuid: Guid.Empty);
+        }
 
-		}
-			
-		public void StartScanningForDevices ()
-		{
-			StartScanningForDevices (serviceUuid: Guid.Empty);
-		}
+        readonly AutoResetEvent stateChanged = new AutoResetEvent(false);
 
-		readonly AutoResetEvent stateChanged = new AutoResetEvent (false);
+        async Task WaitForState(CBCentralManagerState state)
+        {
+            Debug.WriteLine("Adapter: Waiting for state: " + state);
 
-		async Task WaitForState (CBCentralManagerState state)
-		{
-			Debug.WriteLine ("Adapter: Waiting for state: " + state);
+            while (Central.State != state)
+            {
+                await Task.Run(() => stateChanged.WaitOne());
+            }
+        }
 
-			while (_central.State != state) {
-				await Task.Run (() => stateChanged.WaitOne ());
-			}
-		}
+        public async void StartScanningForDevices(Guid serviceUuid)
+        {
+            await WaitForState(CBCentralManagerState.PoweredOn);
 
-		public async void StartScanningForDevices (Guid serviceUuid)
-		{
-			//
-			// Wait for the PoweredOn state
-			//
-			await WaitForState (CBCentralManagerState.PoweredOn);
+            Debug.WriteLine("Adapter: Starting a scan for devices.");
 
-			Debug.WriteLine ("Adapter: Starting a scan for devices.");
+            CBUUID[] serviceUuids = null; // TODO: convert to list so multiple Uuids can be detected
+            if (serviceUuid != Guid.Empty)
+            {
+                var suuid    = CBUUID.FromString(serviceUuid.ToString());
+                serviceUuids = new CBUUID[] { suuid };
 
-			CBUUID[] serviceUuids = null; // TODO: convert to list so multiple Uuids can be detected
-			if (serviceUuid != Guid.Empty) {
-				var suuid = CBUUID.FromString (serviceUuid.ToString ());
-				serviceUuids = new CBUUID[] { suuid };
-				Debug.WriteLine ("Adapter: Scanning for " + suuid);
-			}
+                Debug.WriteLine("Adapter: Scanning for " + suuid);
+            }
 
-			// clear out the list
-			this._discoveredDevices = new List<IDevice> ();
+            // clear out the list
+            DiscoveredDevices = new List<IDevice>();
 
-			// start scanning
-			this._isScanning = true;
-			this._central.ScanForPeripherals ( serviceUuids );
+            // start scanning
+            IsScanning = true;
+            Central.ScanForPeripherals(serviceUuids);
 
-			// in 10 seconds, stop the scan
-			await Task.Delay (10000);
+            // in 10 seconds, stop the scan
+            await Task.Delay(10000);
 
-			// if we're still scanning
-			if (this._isScanning) {
-				Console.WriteLine ("BluetoothLEManager: Scan timeout has elapsed.");
-				this._isScanning = false;
-				this._central.StopScan ();
-				this.ScanTimeoutElapsed (this, new EventArgs ());
-			}
-		}
+            // if we're still scanning
+            if (IsScanning)
+            {
+                Console.WriteLine("BluetoothLEManager: Scan timeout has elapsed.");
+                IsScanning = false;
+                Central.StopScan();
+                ScanTimeoutElapsed(this, new EventArgs());
+            }
+        }
 
-		public void StopScanningForDevices ()
-		{
-			Console.WriteLine ("Adapter: Stopping the scan for devices.");
-			this._isScanning = false;	
-			this._central.StopScan ();
-		}
+        public void StopScanningForDevices()
+        {
+            Console.WriteLine("Adapter: Stopping the scan for devices.");
+            IsScanning = false;
+            Central.StopScan();
+        }
 
-		public void ConnectToDevice (IDevice device)
-		{
-			//TODO: if it doesn't connect after 10 seconds, cancel the operation
-			// (follow the same model we do for scanning).
-			this._central.ConnectPeripheral (device.NativeDevice as CBPeripheral, new PeripheralConnectionOptions());
-				
-//			// in 10 seconds, stop the connection
-//			await Task.Delay (10000);
-//
-//			// if we're still trying to connect
-//			if (this._isConnecting) {
-//				Console.WriteLine ("BluetoothLEManager: Connect timeout has elapsed.");
-//				this._central.
-//				this.ConnectTimeoutElapsed (this, new EventArgs ());
-//			}
-		}
-			
-		public void DisconnectDevice (IDevice device)
-		{
-			this._central.CancelPeripheralConnection (device.NativeDevice as CBPeripheral);
-		}
+        public void ConnectToDevice(IDevice device)
+        {
+            //TODO: if it doesn't connect after 10 seconds, cancel the operation
+            // (follow the same model we do for scanning).
+            Central.ConnectPeripheral(device.NativeDevice as CBPeripheral, new PeripheralConnectionOptions());
 
-		// util
-		protected bool ContainsDevice(IEnumerable<IDevice> list, CBPeripheral device)
-		{
-			foreach (var d in list) {
-				if (Guid.ParseExact(device.Identifier.AsString(), "d") == d.ID)
-					return true;
-			}
-			return false;
-		}
-	}
+            /*
+            // in 10 seconds, stop the connection
+            await Task.Delay(10000);
+
+            // if we're still trying to connect
+            if (IsConnecting)
+            {
+                Console.WriteLine("BluetoothLEManager: Connect timeout has elapsed.");
+                Central. ...
+                ConnectTimeoutElapsed(this, new EventArgs());
+            }
+            */
+        }
+
+        public void DisconnectDevice(IDevice device)
+        {
+            Central.CancelPeripheralConnection(device.NativeDevice as CBPeripheral);
+        }
+
+        // util
+        protected bool ContainsDevice(IEnumerable<IDevice> list, CBPeripheral device)
+        {
+            foreach (var d in list)
+            {
+                if (Guid.ParseExact(device.Identifier.AsString(), "d") == d.ID)
+                    return true;
+            }
+
+            return false;
+        }
+    }
 }
 

@@ -9,9 +9,12 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
         event EventHandler<DeviceDiscoveredEventArgs> DeviceDiscovered;
         event EventHandler<DeviceConnectionEventArgs> DeviceConnected;
         event EventHandler<DeviceConnectionEventArgs> DeviceDisconnected;
+
         //TODO: add this
         //event EventHandler<DeviceConnectionEventArgs> DeviceFailedToConnect;
+
         event EventHandler ScanTimeoutElapsed;
+
         //TODO: add this
         //event EventHandler ConnectTimeoutElapsed;
 
@@ -22,12 +25,14 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
 
         // methods
         void StartScanningForDevices();
+
         void StartScanningForDevices(Guid serviceUuid);
 
         void StopScanningForDevices();
-        void ConnectToDevice(IDevice device);
-        void DisconnectDevice(IDevice device);
 
+        void ConnectToDevice(IDevice device);
+
+        void DisconnectDevice(IDevice device);
     }
 }
 
