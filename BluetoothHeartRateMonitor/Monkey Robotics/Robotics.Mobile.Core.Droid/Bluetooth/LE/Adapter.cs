@@ -16,29 +16,25 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
         public event EventHandler<DeviceConnectionEventArgs> DeviceDisconnected = delegate { };
         public event EventHandler ScanTimeoutElapsed = delegate { };
 
-        protected IList<IDevice> _connectedDevices = new List<IDevice>();
-        protected bool _isScanning;
-        protected IList<IDevice> _discoveredDevices = new List<IDevice>();
-
         // class members
         protected BluetoothManager _manager;
         protected BluetoothAdapter _adapter;
         protected GattCallback _gattCallback;
 
-        public bool IsScanning
-        {
-            get { return _isScanning; }
-        }
+        /// <summary>
+        /// Whether or not we're currently scanning for peripheral devices.
+        /// </summary>
+        public bool IsScanning { get; private set; }
 
-        public IList<IDevice> DiscoveredDevices
-        {
-            get { return _discoveredDevices; }
-        }
+        /// <summary>
+        /// Gets the discovered peripherals.
+        /// </summary>
+        public IList<IDevice> DiscoveredDevices { get; private set; } = new List<IDevice>();
 
-        public IList<IDevice> ConnectedDevices
-        {
-            get { return _connectedDevices; }
-        }
+        /// <summary>
+        /// Gets the connected peripherals.
+        /// </summary>
+        public IList<IDevice> ConnectedDevices { get; private set; } = new List<IDevice>();
 
         public Adapter()
         {
@@ -52,7 +48,7 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
 
             _gattCallback.DeviceConnected += (object sender, DeviceConnectionEventArgs e) =>
             {
-                _connectedDevices.Add(e.Device);
+                ConnectedDevices.Add(e.Device);
                 DeviceConnected(this, e);
             };
 
@@ -76,10 +72,10 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
             Console.WriteLine("Adapter: Starting a scan for devices.");
 
             // clear out the list
-            _discoveredDevices = new List<IDevice>();
+            DiscoveredDevices = new List<IDevice>();
 
             // start scanning
-            _isScanning = true;
+            IsScanning = true;
 
             /*
             if (Build.VERSION.SdkInt >= BuildVersionCodes.Lollipop)
@@ -102,9 +98,9 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
             await Task.Delay(10000);
 
             // if we're still scanning
-            if (_isScanning)
+            if (IsScanning)
             {
-                Console.WriteLine("BluetoothLEManager: Scan timeout has elapsed.");
+                Console.WriteLine("Adapter: Scan timeout has elapsed.");
                 _adapter.StopLeScan(this);
                 ScanTimeoutElapsed(this, new EventArgs());
             }
@@ -113,7 +109,7 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
         public void StopScanningForDevices()
         {
             Console.WriteLine("Adapter: Stopping the scan for devices.");
-            _isScanning = false;
+            IsScanning = false;
             _adapter.StopLeScan(this);
         }
 
@@ -130,7 +126,7 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
 
             if (!DeviceExistsInDiscoveredList(bleDevice))
             {
-                _discoveredDevices.Add(device);
+                DiscoveredDevices.Add(device);
 
                 // TODO: in the cross platform API, cache the RSSI
                 // TODO: shouldn't i only raise this if it's not already in the list?
@@ -140,7 +136,7 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
 
         protected bool DeviceExistsInDiscoveredList(BluetoothDevice device)
         {
-            foreach (var discoveredDevice in _discoveredDevices)
+            foreach (var discoveredDevice in DiscoveredDevices)
             {
                 // TODO: verify that address is unique
                 if (device.Address == ((BluetoothDevice)discoveredDevice.NativeDevice).Address)
@@ -154,7 +150,8 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
         {
             // returns the BluetoothGatt, which is the API for BLE stuff
             // TERRIBLE API design on the part of google here.
-            ((BluetoothDevice)device.NativeDevice).ConnectGatt(Android.App.Application.Context, true, _gattCallback);
+            ((BluetoothDevice)device.NativeDevice).ConnectGatt(Android.App.Application.Context, 
+                                                               true, _gattCallback);
         }
 
         public void DisconnectDevice(IDevice device)

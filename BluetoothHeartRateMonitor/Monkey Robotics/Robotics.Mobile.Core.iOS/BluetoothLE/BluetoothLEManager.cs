@@ -2,171 +2,141 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-#if __UNIFIED__
 using CoreBluetooth;
 using CoreFoundation;
-#else
-using MonoTouch.CoreBluetooth;
-using MonoTouch.CoreFoundation;
-#endif
 
 namespace Robotics.Mobile.Core.iOS
 {
-	/// <summary>
-	/// Manager class for Bluetooth Low Energy connectivity. Adds functionality to the 
-	/// CoreBluetooth Manager to track discovered devices, scanning state, and automatically
-	/// stops scanning after a timeout period.
-	/// </summary>
-	public class BluetoothLEManager// : CBCentralManagerDelegate
-	{
-		// event declarations
-		public event EventHandler<CBDiscoveredPeripheralEventArgs> DeviceDiscovered = delegate {};
-		public event EventHandler<CBPeripheralEventArgs> DeviceConnected = delegate {};
-		public event EventHandler<CBPeripheralErrorEventArgs> DeviceDisconnected = delegate {};
-		public event EventHandler ScanTimeoutElapsed = delegate {};
+    /// <summary>
+    /// Manager class for Bluetooth Low Energy connectivity. Adds functionality to the 
+    /// CoreBluetooth Manager to track discovered devices, scanning state, and automatically
+    /// stops scanning after a timeout period.
+    /// </summary>
+    public class BluetoothLEManager
+    {
+        // event declarations
+        public event EventHandler<CBDiscoveredPeripheralEventArgs> DeviceDiscovered   = delegate { };
+        public event EventHandler<CBPeripheralEventArgs>           DeviceConnected    = delegate { };
+        public event EventHandler<CBPeripheralErrorEventArgs>      DeviceDisconnected = delegate { };
+        public event EventHandler                                  ScanTimeoutElapsed = delegate { };
 
-		/// <summary>
-		/// Whether or not we're currently scanning for peripheral devices
-		/// </summary>
-		/// <value><c>true</c> if this instance is scanning; otherwise, <c>false</c>.</value>
-		public bool IsScanning
-		{
-			get { return this._isScanning; }
-		} protected bool _isScanning = false;
-		protected const int _scanTimeout = 10000;
+        protected const int _scanTimeout = 10000;
 
-		//TODO: WAT?
-//		public CBPeripheralManagerState State
-//		{
-//			get { return this._central.State; }
-//		}
+        /// <summary>
+        /// Whether or not we're currently scanning for peripheral devices.
+        /// </summary>
+        public bool IsScanning { get; protected set; }
 
-		/// <summary>
-		/// Gets the discovered peripherals.
-		/// </summary>
-		/// <value>The discovered peripherals.</value>
-		public List<CBPeripheral> DiscoveredDevices
-		{
-			get { return this._discoveredDevices; }
-		}
-		List<CBPeripheral> _discoveredDevices = new List<CBPeripheral>();
+        /// <summary>
+        /// Gets the discovered peripherals.
+        /// </summary>
+        public List<CBPeripheral> DiscoveredDevices { get; private set; } = new List<CBPeripheral>();
 
-		/// <summary>
-		/// Gets the connected peripherals.
-		/// </summary>
-		/// <value>The discovered peripherals.</value>
-		public List<CBPeripheral> ConnectedDevices
-		{
-			get { return this._connectedDevices; }
-		}
-		List<CBPeripheral> _connectedDevices = new List<CBPeripheral>();
+        /// <summary>
+        /// Gets the connected peripherals.
+        /// </summary>
+        public IList<CBPeripheral> ConnectedDevices { get; private set; } = new List<CBPeripheral>();
 
-		public CBCentralManager CentralBleManager
-		{
-			get { return this._central; }
-		}
-		CBCentralManager _central;
+        /// <summary>
+        /// The central BLE manager.
+        /// </summary>
+        public CBCentralManager CentralManager { get; private set; }
 
-		public static BluetoothLEManager Current
-		{
-			get { return current; }
-		} private static BluetoothLEManager current;
+        /// <summary>
+        /// The current central BLE manager.
+        /// </summary>
+        public static BluetoothLEManager Current { get; private set; }
 
-		static BluetoothLEManager ()
-		{
-			current = new BluetoothLEManager();
-		}
+        static BluetoothLEManager()
+        {
+            Current = new BluetoothLEManager();
+        }
 
-		protected BluetoothLEManager ()
-		{
-			_central = new CBCentralManager (DispatchQueue.CurrentQueue);
-			_central.DiscoveredPeripheral += (object sender, CBDiscoveredPeripheralEventArgs e) => {
-				Console.WriteLine ("DiscoveredPeripheral: " + e.Peripheral.Name);
-				this._discoveredDevices.Add (e.Peripheral);
-				this.DeviceDiscovered(this, e);
-			};
+        protected BluetoothLEManager()
+        {
+            CentralManager = new CBCentralManager(DispatchQueue.CurrentQueue);
+            CentralManager.DiscoveredPeripheral += (object sender, CBDiscoveredPeripheralEventArgs e) =>
+            {
+                Console.WriteLine("DiscoveredPeripheral: " + e.Peripheral.Name);
+                DiscoveredDevices.Add(e.Peripheral);
+                DeviceDiscovered(this, e);
+            };
 
-			_central.UpdatedState += (object sender, EventArgs e) => {
-				Console.WriteLine ("UpdatedState: " + _central.State);
-			};
+            CentralManager.UpdatedState += (object sender, EventArgs e) =>
+            {
+                Console.WriteLine("UpdatedState: " + CentralManager.State);
+            };
 
 
-			_central.ConnectedPeripheral += (object sender, CBPeripheralEventArgs e) => {
-				Console.WriteLine ("ConnectedPeripheral: " + e.Peripheral.Name);
+            CentralManager.ConnectedPeripheral += (object sender, CBPeripheralEventArgs e) =>
+            {
+                Console.WriteLine("ConnectedPeripheral: " + e.Peripheral.Name);
 
-				// when a peripheral gets connected, add that peripheral to our running list of connected peripherals
-				if(!this._connectedDevices.Contains(e.Peripheral) ) {
-					this._connectedDevices.Add (e.Peripheral );
-				}			
+                // When a peripheral gets connected, add that peripheral to our running list of 
+                // connected peripherals
+                if (!ConnectedDevices.Contains(e.Peripheral))
+                    ConnectedDevices.Add(e.Peripheral);
 
-				// raise our connected event
-				this.DeviceConnected ( sender, e);
-			
-			};
+                // raise our connected event
+                DeviceConnected(sender, e);
+            };
 
-			_central.DisconnectedPeripheral += (object sender, CBPeripheralErrorEventArgs e) => {
-				Console.WriteLine ("DisconnectedPeripheral: " + e.Peripheral.Name);
+            CentralManager.DisconnectedPeripheral += (object sender, CBPeripheralErrorEventArgs e) =>
+            {
+                Console.WriteLine("DisconnectedPeripheral: " + e.Peripheral.Name);
 
-				// when a peripheral disconnects, remove it from our running list.
-				if ( this._connectedDevices.Contains (e.Peripheral) ) {
-					this._connectedDevices.Remove ( e.Peripheral);
-				}
+                // When a peripheral disconnects, remove it from our running list.
+                if (ConnectedDevices.Contains(e.Peripheral))
+                    ConnectedDevices.Remove(e.Peripheral);
 
-				// raise our disconnected event
-				this.DeviceDisconnected (sender, e);
+                // Raise our disconnected event
+                DeviceDisconnected(sender, e);
+            };
+        }
 
-			};
-		}
+        /// <summary>
+        /// Begins the scanning for bluetooth LE devices. Automatically called after 10 seconds
+        /// to prevent battery drain.
+        /// </summary>
+        /// <returns>The scanning for devices.</returns>
+        public async Task BeginScanningForDevices()
+        {
+            Console.WriteLine("BluetoothLEManager: Starting a scan for devices.");
 
+            // clear out the list
+            DiscoveredDevices = new List<CBPeripheral>();
 
-		/// <summary>
-		/// Begins the scanning for bluetooth LE devices. Automatically called after 10 seconds
-		/// to prevent battery drain.
-		/// </summary>
-		/// <returns>The scanning for devices.</returns>
-		public async Task BeginScanningForDevices()
-		{
-			Console.WriteLine ("BluetoothLEManager: Starting a scan for devices.");
+            // start scanning
+            IsScanning = true;
+            CentralManager.ScanForPeripherals(peripheralUuids: null);
 
-			// clear out the list
-			this._discoveredDevices = new List<CBPeripheral> ();
+            // in 10 seconds, stop the scan
+            await Task.Delay(10000);
 
-			// start scanning
-			this._isScanning = true;
-			#if __UNIFIED__
-			_central.ScanForPeripherals (peripheralUuids:null);
-			#else
-			_central.ScanForPeripherals (serviceUuids:null);
-			#endif
+            // if we're still scanning
+            if (IsScanning)
+            {
+                Console.WriteLine("BluetoothLEManager: Scan timeout has elapsed.");
+                CentralManager.StopScan();
+                ScanTimeoutElapsed(this, new EventArgs());
+            }
+        }
 
-			// in 10 seconds, stop the scan
-			await Task.Delay (10000);
+        /// <summary>
+        /// Stops the Central Bluetooth Manager from scanning for more devices. Automatically
+        /// called after 10 seconds to prevent battery drain. 
+        /// </summary>
+        public void StopScanningForDevices()
+        {
+            Console.WriteLine("BluetoothLEManager: Stopping the scan for devices.");
+            IsScanning = false;
+            CentralManager.StopScan();
+        }
 
-			// if we're still scanning
-			if (this._isScanning) {
-				Console.WriteLine ("BluetoothLEManager: Scan timeout has elapsed.");
-				this._central.StopScan ();
-				this.ScanTimeoutElapsed (this, new EventArgs ());
-			}
-		}
-
-		/// <summary>
-		/// Stops the Central Bluetooth Manager from scanning for more devices. Automatically
-		/// called after 10 seconds to prevent battery drain. 
-		/// </summary>
-		public void StopScanningForDevices()
-		{
-			Console.WriteLine ("BluetoothLEManager: Stopping the scan for devices.");
-			this._isScanning = false;
-			_central.StopScan ();
-		}
-
-		//TODO: rename to DisconnectDevice
-		public void DisconnectPeripheral (CBPeripheral peripheral)
-		{
-			_central.CancelPeripheralConnection (peripheral);
-		}
-
-	}
+        public void DisconnectDevice(CBPeripheral peripheral)
+        {
+            CentralManager.CancelPeripheralConnection(peripheral);
+        }
+    }
 }
 

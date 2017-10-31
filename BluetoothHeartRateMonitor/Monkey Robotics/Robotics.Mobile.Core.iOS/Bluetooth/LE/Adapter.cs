@@ -11,6 +11,8 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
 {
     public class Adapter : IAdapter
     {
+        readonly AutoResetEvent _stateChanged = new AutoResetEvent(false);
+
         // events
         public event EventHandler<DeviceDiscoveredEventArgs> DeviceDiscovered      = delegate { };
         public event EventHandler<DeviceConnectionEventArgs> DeviceConnected       = delegate { };
@@ -19,7 +21,7 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
         public event EventHandler                            ScanTimeoutElapsed    = delegate { };
         public event EventHandler                            ConnectTimeoutElapsed = delegate { };
 
-        private CBCentralManager Central { get; set; }
+        private CBCentralManager CentralManager { get; set; }
 
         public bool IsScanning { get; private set; }
 
@@ -33,26 +35,26 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
 
         protected Adapter()
         {
-            Central = new CBCentralManager(DispatchQueue.CurrentQueue);
+            CentralManager = new CBCentralManager(DispatchQueue.CurrentQueue);
 
-            Central.DiscoveredPeripheral += (object sender, CBDiscoveredPeripheralEventArgs e) =>
+            CentralManager.DiscoveredPeripheral += (object sender, CBDiscoveredPeripheralEventArgs e) =>
             {
                 Console.WriteLine("DiscoveredPeripheral: " + e.Peripheral.Name);
                 Device d = new Device(e.Peripheral);
                 if (!ContainsDevice(DiscoveredDevices, e.Peripheral))
                 {
                     DiscoveredDevices.Add(d);
-                    this.DeviceDiscovered(this, new DeviceDiscoveredEventArgs() { Device = d });
+                    DeviceDiscovered(this, new DeviceDiscoveredEventArgs() { Device = d });
                 }
             };
 
-            Central.UpdatedState += (object sender, EventArgs e) =>
+            CentralManager.UpdatedState += (object sender, EventArgs e) =>
             {
-                Console.WriteLine("UpdatedState: " + Central.State);
-                stateChanged.Set();
+                Console.WriteLine("UpdatedState: " + CentralManager.State);
+                _stateChanged.Set();
             };
 
-            Central.ConnectedPeripheral += (object sender, CBPeripheralEventArgs e) =>
+            CentralManager.ConnectedPeripheral += (object sender, CBPeripheralEventArgs e) =>
             {
                 Console.WriteLine("ConnectedPeripheral: " + e.Peripheral.Name);
 
@@ -63,11 +65,11 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
                     Device d = new Device(e.Peripheral);
                     ConnectedDevices.Add(new Device(e.Peripheral));
                     // raise our connected event
-                    this.DeviceConnected(sender, new DeviceConnectionEventArgs() { Device = d });
+                    DeviceConnected(sender, new DeviceConnectionEventArgs() { Device = d });
                 }
             };
 
-            Central.DisconnectedPeripheral += (object sender, CBPeripheralErrorEventArgs e) =>
+            CentralManager.DisconnectedPeripheral += (object sender, CBPeripheralErrorEventArgs e) =>
             {
                 Console.WriteLine("DisconnectedPeripheral: " + e.Peripheral.Name);
 
@@ -89,7 +91,7 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
                                            });
             };
 
-            Central.FailedToConnectPeripheral += (object sender, CBPeripheralErrorEventArgs e) =>
+            CentralManager.FailedToConnectPeripheral += (object sender, CBPeripheralErrorEventArgs e) =>
             {
                 // raise the failed to connect event
                 DeviceFailedToConnect(this, new DeviceConnectionEventArgs()
@@ -105,15 +107,13 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
             StartScanningForDevices(serviceUuid: Guid.Empty);
         }
 
-        readonly AutoResetEvent stateChanged = new AutoResetEvent(false);
-
         async Task WaitForState(CBCentralManagerState state)
         {
             Debug.WriteLine("Adapter: Waiting for state: " + state);
 
-            while (Central.State != state)
+            while (CentralManager.State != state)
             {
-                await Task.Run(() => stateChanged.WaitOne());
+                await Task.Run(() => _stateChanged.WaitOne());
             }
         }
 
@@ -137,7 +137,7 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
 
             // start scanning
             IsScanning = true;
-            Central.ScanForPeripherals(serviceUuids);
+            CentralManager.ScanForPeripherals(serviceUuids);
 
             // in 10 seconds, stop the scan
             await Task.Delay(10000);
@@ -145,9 +145,9 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
             // if we're still scanning
             if (IsScanning)
             {
-                Console.WriteLine("BluetoothLEManager: Scan timeout has elapsed.");
+                Console.WriteLine("Adapter: Scan timeout has elapsed.");
                 IsScanning = false;
-                Central.StopScan();
+                CentralManager.StopScan();
                 ScanTimeoutElapsed(this, new EventArgs());
             }
         }
@@ -156,14 +156,14 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
         {
             Console.WriteLine("Adapter: Stopping the scan for devices.");
             IsScanning = false;
-            Central.StopScan();
+            CentralManager.StopScan();
         }
 
         public void ConnectToDevice(IDevice device)
         {
             //TODO: if it doesn't connect after 10 seconds, cancel the operation
             // (follow the same model we do for scanning).
-            Central.ConnectPeripheral(device.NativeDevice as CBPeripheral, new PeripheralConnectionOptions());
+            CentralManager.ConnectPeripheral(device.NativeDevice as CBPeripheral, new PeripheralConnectionOptions());
 
             /*
             // in 10 seconds, stop the connection
@@ -172,7 +172,7 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
             // if we're still trying to connect
             if (IsConnecting)
             {
-                Console.WriteLine("BluetoothLEManager: Connect timeout has elapsed.");
+                Console.WriteLine("Adapter: Connect timeout has elapsed.");
                 Central. ...
                 ConnectTimeoutElapsed(this, new EventArgs());
             }
@@ -181,7 +181,7 @@ namespace Robotics.Mobile.Core.Bluetooth.LE
 
         public void DisconnectDevice(IDevice device)
         {
-            Central.CancelPeripheralConnection(device.NativeDevice as CBPeripheral);
+            CentralManager.CancelPeripheralConnection(device.NativeDevice as CBPeripheral);
         }
 
         // util
